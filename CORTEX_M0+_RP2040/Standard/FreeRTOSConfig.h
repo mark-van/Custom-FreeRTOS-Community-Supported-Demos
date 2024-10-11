@@ -48,6 +48,7 @@
 #define configMAX_PRIORITIES                    32
 #define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 256
 #define configUSE_16_BIT_TICKS                  0
+#define configUSE_EDF                           1
 
 #define configIDLE_SHOULD_YIELD                 1
 
@@ -62,6 +63,7 @@
 #define configUSE_NEWLIB_REENTRANT              0
 #define configENABLE_BACKWARD_COMPATIBILITY     0
 #define configNUM_THREAD_LOCAL_STORAGE_POINTERS 5
+#define configMAX_TASKS                         10
 
 /* System */
 #define configSTACK_DEPTH_TYPE                  uint32_t
