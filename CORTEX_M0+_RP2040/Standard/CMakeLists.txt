@@ -35,6 +35,7 @@ add_executable(main_full
         )
 
 target_compile_definitions(main_full PRIVATE
+        mainCREATE_SIMPLE_EDF_DEMO_ONLY=0
         mainCREATE_SIMPLE_BLINKY_DEMO_ONLY=0
         )
 
@@ -66,6 +67,7 @@ add_executable(main_blinky
         )
 
 target_compile_definitions(main_blinky PRIVATE
+        mainCREATE_SIMPLE_EDF_DEMO_ONLY=0
         mainCREATE_SIMPLE_BLINKY_DEMO_ONLY=1
         )
 
@@ -75,3 +77,20 @@ target_include_directories(main_blinky PRIVATE
 
 target_link_libraries(main_blinky pico_stdlib FreeRTOS-Kernel FreeRTOS-Kernel-Heap1)
 pico_add_extra_outputs(main_blinky)
+
+add_executable(main_EDF
+        main.c
+        main_EDF.c
+        )
+
+target_compile_definitions(main_EDF PRIVATE
+        mainCREATE_SIMPLE_EDF_DEMO_ONLY=1
+        mainCREATE_SIMPLE_BLINKY_DEMO_ONLY=0
+        )
+
+target_include_directories(main_EDF PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/../../../../Common/include)
+
+target_link_libraries(main_EDF pico_stdlib FreeRTOS-Kernel FreeRTOS-Kernel-Heap1)
+pico_add_extra_outputs(main_EDF)

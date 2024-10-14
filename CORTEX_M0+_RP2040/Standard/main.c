@@ -62,6 +62,8 @@
 #include "pico/multicore.h"
 #endif
 
+#define mainEXTERNAL_LED                    ( 14 )
+
 /* Set mainCREATE_SIMPLE_BLINKY_DEMO_ONLY to one to run the simple blinky demo,
 or 0 to run the more comprehensive test and demo application. */
 
@@ -73,14 +75,19 @@ or 0 to run the more comprehensive test and demo application. */
 static void prvSetupHardware( void );
 
 /*
- * main_blinky() is used when mainCREATE_SIMPLE_BLINKY_DEMO_ONLY is set to 1.
- * main_full() is used when mainCREATE_SIMPLE_BLINKY_DEMO_ONLY is set to 0.
+ * main_EDF() is used when mainCREATE_SIMPLE_EDF_DEMO_ONLY is set to 1.
+ * main_blinky() is used when mainCREATE_SIMPLE_EDF_DEMO_ONLY is set to 0 AND
+ *              mainCREATE_SIMPLE_BLINKY_DEMO_ONLY is set to 1.
+ * main_full() is used when mainCREATE_SIMPLE_EDF_DEMO_ONLY AND
+ *              mainCREATE_SIMPLE_BLINKY_DEMO_ONLY are set to 0.
  */
-#if mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 1
+#if mainCREATE_SIMPLE_EDF_DEMO_ONLY == 1
+extern void main_EDF( uint16_t led );
+#elif mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 1
 extern void main_blinky( void );
 #else
 extern void main_full( void );
-#endif /* #if mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 1 */
+#endif
 
 /* Prototypes for the standard FreeRTOS callback/hook functions implemented
 within this file. */
@@ -93,9 +100,11 @@ void vApplicationTickHook( void );
 
 void vLaunch( void)
 {
-    /* The mainCREATE_SIMPLE_BLINKY_DEMO_ONLY setting is described at the top
-of this file. */
-#if( mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 1 )
+#if( mainCREATE_SIMPLE_EDF_DEMO_ONLY == 1 )
+    {
+        main_EDF( mainEXTERNAL_LED );
+    }
+#elif( mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 1 )
     {
         main_blinky();
     }
@@ -141,6 +150,11 @@ static void prvSetupHardware( void )
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, 1);
     gpio_put(PICO_DEFAULT_LED_PIN, !PICO_DEFAULT_LED_PIN_INVERTED);
+
+    //add for external
+    gpio_init(mainEXTERNAL_LED);
+    gpio_set_dir(mainEXTERNAL_LED, 1);
+    gpio_put(mainEXTERNAL_LED, 0);
 }
 /*-----------------------------------------------------------*/
 
@@ -191,7 +205,7 @@ void vApplicationIdleHook( void )
 
 void vApplicationTickHook( void )
 {
-#if mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 0
+#if ((mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 0) && (mainCREATE_SIMPLE_EDF_DEMO_ONLY == 0))
     {
         /* The full demo includes a software timer demo/test that requires
         prodding periodically from the tick interrupt. */
