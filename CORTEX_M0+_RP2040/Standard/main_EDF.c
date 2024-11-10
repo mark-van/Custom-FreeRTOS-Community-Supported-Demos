@@ -93,8 +93,10 @@ static void prvTask1( void *pvParameters )
 
 	for( ;; )
 	{
+        printf("prvTask1 Start\n");
         gpio_xor_mask( 1u << externalLED );
-        taskDoneEDF(&xInitialWakeTime);
+        printf("prvTask1 DONE\n");
+        vTaskDoneEDF(&xInitialWakeTime);
 	}
 }
 /*-----------------------------------------------------------*/
@@ -108,8 +110,10 @@ static void prvTask2( void *pvParameters )
 
 	for( ;; )
 	{
+        printf("prvTask2 Start\n");
         gpio_xor_mask( 1u << mainON_BOARD_LED );
-        taskDoneEDF(&xInitialWakeTime);
+        printf("prvTask2 DONE\n");
+        vTaskDoneEDF(&xInitialWakeTime);
 	}
 }
 /*-----------------------------------------------------------*/
