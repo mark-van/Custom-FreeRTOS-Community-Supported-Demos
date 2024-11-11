@@ -95,6 +95,18 @@ static void prvTask1( void *pvParameters )
 	{
         printf("prvTask1 Start\n");
         gpio_xor_mask( 1u << externalLED );
+
+
+        // Task execution time
+        TickType_t currentTick = xTaskGetTickCount();
+        while(xTaskGetTickCount() - currentTick < pdMS_TO_TICKS(500))
+        {
+            // delay 0.5 second
+            //..this doesnt rellr wor ktho, i need a delay that requries the
+            // process to stay in the task
+        }
+
+        gpio_xor_mask( 1u << externalLED );
         printf("prvTask1 DONE\n");
         vTaskDoneEDF(&xInitialWakeTime);
 	}
@@ -111,6 +123,15 @@ static void prvTask2( void *pvParameters )
 	for( ;; )
 	{
         printf("prvTask2 Start\n");
+        gpio_xor_mask( 1u << mainON_BOARD_LED );
+
+        // Task execution time
+        TickType_t currentTick = xTaskGetTickCount();
+        while(xTaskGetTickCount() - currentTick < pdMS_TO_TICKS(1250))
+        {
+            // delay 1.25 second
+        }
+
         gpio_xor_mask( 1u << mainON_BOARD_LED );
         printf("prvTask2 DONE\n");
         vTaskDoneEDF(&xInitialWakeTime);
