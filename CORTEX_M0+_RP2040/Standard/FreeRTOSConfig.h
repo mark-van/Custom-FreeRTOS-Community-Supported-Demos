@@ -49,6 +49,9 @@
 #define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 256
 #define configUSE_16_BIT_TICKS                  0
 #define configUSE_EDF                           1
+#define configUSE_CBS                           1
+#define configMAX_NUM_SERVERS_CBS               10
+#define config_MAX_NUM_JOBS_CBS                 100                          
 
 #define configIDLE_SHOULD_YIELD                 1
 
