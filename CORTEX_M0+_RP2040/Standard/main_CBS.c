@@ -34,15 +34,35 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "timers.h"
+#include "hardware/gpio.h"
+#include "hardware/timer.h"
+#include "hardware/clocks.h"
+#include "pico/stdlib.h"
 
 /* Library includes. */
 #include <stdio.h>
-#include "hardware/gpio.h"
-
+#include <stdlib.h>
+#include <inttypes.h>
 
 #define mainON_BOARD_LED					( PICO_DEFAULT_LED_PIN )
-
+#define NUM_TIMERS                          ( 3 )
+#define MAX_NO_OVERFLOW                     (0xffffffff / 1000)
+#define TIME_SCALE                          (100)
 /*-----------------------------------------------------------*/
+
+typedef enum
+{
+    LOGIC_GPIO_0 =  20,
+    LOGIC_GPIO_1 =  21,
+    LOGIC_GPIO_2 =  22,
+    LOGIC_GPIO_3 =  26,
+} LogicAnalyzerGPIOS;
+
+TimerHandle_t xTimers[ NUM_TIMERS ];
+UBaseType_t indexCBS;
+long int num[ NUM_TIMERS ];
+static uint8_t jobIndex;
 
 /*
  * Called by main when mainCREATE_SIMPLE_EDF_DEMO_ONLY is set to 1 in
@@ -54,8 +74,12 @@ void main_CBS( uint16_t led );
  * The tasks as described in the comments at the top of this file.
  */
 static void prvTask1( void *pvParameters );
-static void prvTask2( void *pvParameters );
-static void prvJob1( void *pvParameters );
+static void prvJob( void *pvParameters );
+void vTimerJobCallback( TimerHandle_t xTimer );
+uint64_t nonBlockingDelay( void );
+uint64_t delayValue;
+static __noinline void ns_delay(uint32_t ns);
+void delay_ms(uint32_t ms);
 
 /*-----------------------------------------------------------*/
 
@@ -68,27 +92,57 @@ void main_CBS( uint16_t led )
     printf(" Starting main_CBS.\n");
     externalLED = led;
 
-    uint16_t task1DeadlineMS = 100;
-    uint16_t task1PeriodMS = 1000;
-    uint16_t task2DeadlineMS = 200;
-    uint16_t task2PeriodMS = 2000;
+    gpio_init(LOGIC_GPIO_0);
+    gpio_set_dir(LOGIC_GPIO_0, 1);
+    gpio_put(LOGIC_GPIO_0, 0);
+    gpio_init(LOGIC_GPIO_1);
+    gpio_set_dir(LOGIC_GPIO_1, 1);
+    gpio_put(LOGIC_GPIO_1, 0);
+    gpio_init(LOGIC_GPIO_2);
+    gpio_set_dir(LOGIC_GPIO_2, 1);
+    gpio_put(LOGIC_GPIO_2, 0);
+    gpio_init(LOGIC_GPIO_3);
+    gpio_set_dir(LOGIC_GPIO_3, 1);
+    gpio_put(LOGIC_GPIO_3, 0);
 
-    xTaskCreateEDF( prvTask1, "Task1", configMINIMAL_STACK_SIZE, NULL, NULL, task1DeadlineMS, task1PeriodMS);
+    uint16_t task1DeadlineMS = 3 * TIME_SCALE;
+    uint16_t task1PeriodMS = 3 * TIME_SCALE;
 
-    xTaskCreateEDF( prvTask2, "Task2", configMINIMAL_STACK_SIZE, NULL, NULL, task2DeadlineMS, task2PeriodMS);
+    TaskHandle_t pxCreatedTask;
+    xTaskCreateEDF( prvTask1, "Task1", configMINIMAL_STACK_SIZE, NULL, &pxCreatedTask, task1DeadlineMS, task1PeriodMS);
+    vTaskSetApplicationTaskTag(pxCreatedTask, ( void * ) (1u << LOGIC_GPIO_0));
 
-    UBaseType_t indexCBS;
-    UBaseType_t maxBudget = 100;
-    UBaseType_t serverPeriod = 1000;
+    UBaseType_t maxBudget = 2 * TIME_SCALE;
+    UBaseType_t serverPeriod = 7 * TIME_SCALE;
  
-    xTaskCreateCBS( "CBS Task", configMINIMAL_STACK_SIZE, NULL, &indexCBS, maxBudget, serverPeriod);
+    xTaskCreateCBS( "CBS Task", configMINIMAL_STACK_SIZE, &pxCreatedTask, &indexCBS, maxBudget, serverPeriod);
+    vTaskSetApplicationTaskTag(pxCreatedTask, ( void * ) (1u << LOGIC_GPIO_1));
 
-    xTaskCreateJobCBS( prvJob1, NULL, indexCBS);
-    xTaskCreateJobCBS( prvJob1, NULL, indexCBS);
-    xTaskCreateJobCBS( prvJob1, NULL, indexCBS);
-    xTaskCreateJobCBS( prvJob1, NULL, indexCBS);
+    xTimers[0] = xTimerCreate   ( 
+                                    "3", // provide number indicating computation time of job
+                                    pdMS_TO_TICKS(2 * TIME_SCALE),
+                                    pdFALSE,
+                                    ( void * ) 0,
+                                    vTimerJobCallback
+                                );
 
-    /* Start the tasks and timer running. */
+    xTimers[1] = xTimerCreate   ( 
+                                    "2", // provide number indicating computation time of job
+                                    pdMS_TO_TICKS(7 * TIME_SCALE),
+                                    pdFALSE,
+                                    ( void * ) 0,
+                                    vTimerJobCallback
+                                );
+
+    xTimers[2] = xTimerCreate   ( 
+                                    "1", // provide number indicating computation time of job
+                                    pdMS_TO_TICKS(17 * TIME_SCALE),
+                                    pdFALSE,
+                                    ( void * ) 0,
+                                    vTimerJobCallback
+                                );
+
+    printf("About to start scheduler\n");
     vTaskStartScheduler();
 
 	for( ;; );
@@ -104,68 +158,43 @@ static void prvTask1( void *pvParameters )
 
 	for( ;; )
 	{
-        printf("prvTask1 Start\n");
-        gpio_xor_mask( 1u << externalLED );
-
-
-        // Task execution time
-        TickType_t currentTick = xTaskGetTickCount();
-        while(xTaskGetTickCount() - currentTick < pdMS_TO_TICKS(500))
-        {
-            // delay 0.5 second
-            //..this doesnt rellr wor ktho, i need a delay that requries the
-            // process to stay in the task
-        }
-
-        gpio_xor_mask( 1u << externalLED );
-        printf("prvTask1 DONE\n");
+        delay_ms(2 * TIME_SCALE);
         vTaskDoneEDF(&xInitialWakeTime);
 	}
 }
+
 /*-----------------------------------------------------------*/
 
-static void prvTask2( void *pvParameters )
+static void prvJob( void *pvParameters )
 {
-	/* Remove compiler warning about unused parameter. */
-	( void ) pvParameters;
-
-    TickType_t xInitialWakeTime = xTaskGetTickCount();
-
-	for( ;; )
-	{
-        printf("prvTask2 Start\n");
-        gpio_xor_mask( 1u << mainON_BOARD_LED );
-
-        // Task execution time
-        TickType_t currentTick = xTaskGetTickCount();
-        while(xTaskGetTickCount() < pdMS_TO_TICKS(1250) + currentTick)
-        {
-            // delay 1.25 second
-        }
-
-        gpio_xor_mask( 1u << mainON_BOARD_LED );
-        printf("prvTask2 DONE\n");
-        vTaskDoneEDF(&xInitialWakeTime);
-	}
+    long int num = *(long int *)pvParameters;
+    delay_ms(num * TIME_SCALE);
 }
+
 /*-----------------------------------------------------------*/
 
-static void prvJob1( void *pvParameters )
+void vTimerJobCallback( TimerHandle_t xTimer )
 {
-	( void ) pvParameters;
+    char *endptr;
+    num[jobIndex] = strtol(pcTimerGetName(xTimer), &endptr, 10);
+    xTaskCreateJobCBS( prvJob, &num[jobIndex], indexCBS);
+    jobIndex++;
+}
 
-    printf("prvJob1 Start\n");
+/*-----------------------------------------------------------*/
 
-    //TickType_t currentTick = xTaskGetTickCount();
-    uint64_t inc = 0;
-    while(inc < (1 << 3))
+void delay_ms(uint32_t ms) 
+{
+    for (int k = 0; k < ms; k++)
     {
-        // delay 0.5 second
-        inc++;
-        printf("prvJob1  %llu \n", inc);
+        ns_delay(1000000);
     }
-
-    printf("prvJob1 DONE\n");
-
 }
+
 /*-----------------------------------------------------------*/
+
+static __noinline void ns_delay(uint32_t ns) {
+    // cycles = ns * clk_sys_hz / 1,000,000,000
+    uint32_t cycles = ns * (clock_get_hz(clk_sys) >> 16u) / (1000000000u >> 16u);
+    busy_wait_at_least_cycles(cycles);
+}

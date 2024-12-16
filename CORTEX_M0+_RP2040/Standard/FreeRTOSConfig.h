@@ -51,14 +51,14 @@
 #define configUSE_EDF                           1
 #define configUSE_CBS                           1
 #define configMAX_NUM_SERVERS_CBS               10
-#define config_MAX_NUM_JOBS_CBS                 100                          
+#define config_MAX_NUM_JOBS_CBS                 100                  
 
 #define configIDLE_SHOULD_YIELD                 1
 
 /* Synchronization Related */
 #define configUSE_MUTEXES                       1
 #define configUSE_RECURSIVE_MUTEXES             1
-#define configUSE_APPLICATION_TASK_TAG          0
+#define configUSE_APPLICATION_TASK_TAG          1
 #define configUSE_COUNTING_SEMAPHORES           1
 #define configQUEUE_REGISTRY_SIZE               8
 #define configUSE_QUEUE_SETS                    1
