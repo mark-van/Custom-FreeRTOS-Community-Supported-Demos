@@ -105,12 +105,12 @@ void main_CBS( uint16_t led )
     gpio_set_dir(LOGIC_GPIO_3, 1);
     gpio_put(LOGIC_GPIO_3, 0);
 
-    uint16_t task1DeadlineMS = 3 * TIME_SCALE;
-    uint16_t task1PeriodMS = 3 * TIME_SCALE;
+    // uint16_t task1DeadlineMS = 3 * TIME_SCALE;
+    // uint16_t task1PeriodMS = 3 * TIME_SCALE;
 
     TaskHandle_t pxCreatedTask;
-    xTaskCreateEDF( prvTask1, "Task1", configMINIMAL_STACK_SIZE, NULL, &pxCreatedTask, task1DeadlineMS, task1PeriodMS);
-    vTaskSetApplicationTaskTag(pxCreatedTask, ( void * ) (1u << LOGIC_GPIO_0));
+    // xTaskCreateEDF( prvTask1, "Task1", configMINIMAL_STACK_SIZE, NULL, &pxCreatedTask, task1DeadlineMS, task1PeriodMS);
+    // vTaskSetApplicationTaskTag(pxCreatedTask, ( void * ) (1u << LOGIC_GPIO_0));
 
     UBaseType_t maxBudget = 2 * TIME_SCALE;
     UBaseType_t serverPeriod = 7 * TIME_SCALE;
@@ -120,8 +120,8 @@ void main_CBS( uint16_t led )
 
     xTimers[0] = xTimerCreate   ( 
                                     "3", // provide number indicating computation time of job
-                                    pdMS_TO_TICKS(2 * TIME_SCALE),
-                                    pdFALSE,
+                                    pdMS_TO_TICKS(3 * TIME_SCALE),
+                                    pdTRUE,
                                     ( void * ) 0,
                                     vTimerJobCallback
                                 );
@@ -129,7 +129,7 @@ void main_CBS( uint16_t led )
     xTimers[1] = xTimerCreate   ( 
                                     "2", // provide number indicating computation time of job
                                     pdMS_TO_TICKS(7 * TIME_SCALE),
-                                    pdFALSE,
+                                    pdTRUE,
                                     ( void * ) 0,
                                     vTimerJobCallback
                                 );
@@ -137,12 +137,17 @@ void main_CBS( uint16_t led )
     xTimers[2] = xTimerCreate   ( 
                                     "1", // provide number indicating computation time of job
                                     pdMS_TO_TICKS(17 * TIME_SCALE),
-                                    pdFALSE,
-                                    ( void * ) 0,
+                                    pdTRUE,
+                                    ( void * ) 100,
                                     vTimerJobCallback
                                 );
 
+    xTimerStart(xTimers[0], 0);
+    xTimerStart(xTimers[1], 0);
+    xTimerStart(xTimers[2], 0);
+
     printf("About to start scheduler\n");
+    gpio_set_mask( 1u << LOGIC_GPIO_3 );
     vTaskStartScheduler();
 
 	for( ;; );
@@ -168,6 +173,7 @@ static void prvTask1( void *pvParameters )
 static void prvJob( void *pvParameters )
 {
     long int num = *(long int *)pvParameters;
+    printf("prvJob delay : %lu\n", num * TIME_SCALE);
     delay_ms(num * TIME_SCALE);
 }
 
@@ -175,10 +181,33 @@ static void prvJob( void *pvParameters )
 
 void vTimerJobCallback( TimerHandle_t xTimer )
 {
+    //taskENTER_CRITICAL();
+    gpio_set_mask( 1u << LOGIC_GPIO_2 );
     char *endptr;
     num[jobIndex] = strtol(pcTimerGetName(xTimer), &endptr, 10);
+    // //printf("Comupation time: %lu\n", num[jobIndex]);
+    // int i=0;
+    // while (i<1000)
+    // {
+    //     printf("xTaskGetTickCount()0.5: %lu\n", xTaskGetTickCount());
+    //     ns_delay(1000000);
+    //     i++;
+    // }
     xTaskCreateJobCBS( prvJob, &num[jobIndex], indexCBS);
     jobIndex++;
+    //ns_delay(1000000);
+    gpio_clr_mask( 1u << LOGIC_GPIO_2 );
+    // //xTimerDelete(xTimer, 0);
+    // xTimerStop( xTimer, 0 );
+    //taskEXIT_CRITICAL();
+    //int i = 0;
+    //while (i < 100)
+    //{
+    // portEXIT_CRITICAL();
+    // portEXIT_CRITICAL();
+    // portEXIT_CRITICAL();
+      //  i++;
+    //}
 }
 
 /*-----------------------------------------------------------*/
