@@ -94,7 +94,7 @@ static uint16_t externalLED = mainON_BOARD_LED;
 
 void main_CBS( uint16_t led )
 {
-    printf(" Starting main_CBS.\n");
+    //printf(" Starting main_CBS.\n");
     externalLED = led;
 
     initLogicGPIO();
@@ -132,7 +132,7 @@ void main_CBS( uint16_t led )
                                     "1", // provide number indicating computation time of job
                                     pdMS_TO_TICKS(17 * TIME_SCALE),
                                     pdFALSE,
-                                    ( void * ) 100,
+                                    ( void * ) 0,
                                     vTimerJobCallback
                                 );
 
@@ -140,7 +140,7 @@ void main_CBS( uint16_t led )
     xTimerStart(xTimers[1], 0);
     xTimerStart(xTimers[2], 0);
 
-    printf("About to start scheduler\n");
+    //printf("About to start scheduler\n");
     vTaskStartScheduler();
 
 	for( ;; );
@@ -166,7 +166,7 @@ static void prvTask1( void *pvParameters )
 static void prvJob( void *pvParameters )
 {
     UBaseType_t num = *(UBaseType_t *)pvParameters;
-    printf("prvJob delay : %lu\n", num * TIME_SCALE);
+    //printf("prvJob delay : %lu\n", num * TIME_SCALE);
     delay_ms(num * TIME_SCALE);
 }
 
@@ -176,11 +176,11 @@ void vTimerJobCallback( TimerHandle_t xTimer )
 {
     gpio_set_mask( 1u << LOGIC_GPIO_2 );
     char *endptr;
-    printf("xTimer: %P\n", xTimer);
+    //printf("xTimer: %P\n", xTimer);
     num[jobIndex] = strtol(pcTimerGetName(xTimer), &endptr, 10);
-    printf("before num[jobIndex]: %lu\n", num[jobIndex]);
+    //printf("before num[jobIndex]: %lu\n", num[jobIndex]);
     xTaskCreateJobCBS( prvJob, &num[jobIndex], indexCBS);
-    printf("after num[jobIndex]: %lu\n", num[jobIndex]);
+    //printf("after num[jobIndex]: %lu\n", num[jobIndex]);
     jobIndex++;
     gpio_clr_mask( 1u << LOGIC_GPIO_2 );
 }

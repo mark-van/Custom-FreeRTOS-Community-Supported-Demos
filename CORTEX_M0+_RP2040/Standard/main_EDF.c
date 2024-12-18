@@ -82,7 +82,7 @@ char buffer[configSTATS_BUFFER_MAX_LENGTH];
 
 void main_EDF( uint16_t led )
 {
-    printf(" Starting main_EDF.\n");
+    //printf(" Starting main_EDF.\n");
     externalLED = led;
 
     initLogicGPIO();
