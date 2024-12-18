@@ -48,18 +48,19 @@
 #define mainON_BOARD_LED					( PICO_DEFAULT_LED_PIN )
 #define NUM_TIMERS                          ( 3 )
 #define MAX_NO_OVERFLOW                     (0xffffffff / 1000)
-#define TIME_SCALE                          (100)
+#define TIME_SCALE                          (1000)
 /*-----------------------------------------------------------*/
 
 typedef enum
 {
-    LOGIC_GPIO_0 =  20,
-    LOGIC_GPIO_1 =  21,
-    LOGIC_GPIO_2 =  22,
-    LOGIC_GPIO_3 =  26,
-    LOGIC_GPIO_4 =  27,
-    LOGIC_GPIO_5 =  28,
-    LOGIC_GPIO_6 =  2,
+    LOGIC_GPIO_0 =  20, // Hard Task 1
+    LOGIC_GPIO_1 =  21, // CBS
+    LOGIC_GPIO_2 =  22, // Job
+    LOGIC_GPIO_3 =  26, // Timers
+    LOGIC_GPIO_4 =  27, // Idle
+    LOGIC_GPIO_5 =  28, // Rule 1
+    LOGIC_GPIO_6 =  2,  // Rule 2
+    LOGIC_GPIO_7 =  3,  // Rule 3
 } LogicAnalyzerGPIOS;
 
 TimerHandle_t xTimers[ NUM_TIMERS ];
@@ -113,7 +114,7 @@ void main_CBS( uint16_t led )
 
     xTimers[0] = xTimerCreate   ( 
                                     "3", // provide number indicating computation time of job
-                                    pdMS_TO_TICKS(3 * TIME_SCALE),
+                                    pdMS_TO_TICKS(2 * TIME_SCALE),
                                     pdFALSE,
                                     ( void * ) 0,
                                     vTimerJobCallback
@@ -227,4 +228,7 @@ void initLogicGPIO(void)
     gpio_init(LOGIC_GPIO_6);
     gpio_set_dir(LOGIC_GPIO_6, 1);
     gpio_put(LOGIC_GPIO_6, 0);
+    gpio_init(LOGIC_GPIO_7);
+    gpio_set_dir(LOGIC_GPIO_7, 1);
+    gpio_put(LOGIC_GPIO_7, 0);
 }

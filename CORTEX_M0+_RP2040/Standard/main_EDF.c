@@ -49,11 +49,11 @@
 
 typedef enum
 {
-    LOGIC_GPIO_0 =  20,
-    LOGIC_GPIO_1 =  21,
-    LOGIC_GPIO_2 =  22,
-    LOGIC_GPIO_3 =  26,
-    LOGIC_GPIO_4 =  27,
+    LOGIC_GPIO_0 =  20, // Hard Task 1
+    LOGIC_GPIO_1 =  21, // Hard Task 2
+    LOGIC_GPIO_2 =  22, // Hard Task 3
+    LOGIC_GPIO_3 =  26, // Timers
+    LOGIC_GPIO_4 =  27, // Idle
     LOGIC_GPIO_5 =  28,
     LOGIC_GPIO_6 =  2,
 } LogicAnalyzerGPIOS;
