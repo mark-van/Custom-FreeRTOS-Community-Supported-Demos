@@ -36,6 +36,7 @@ add_executable(main_full
 
 target_compile_definitions(main_full PRIVATE
         mainCREATE_SIMPLE_EDF_DEMO_ONLY=0
+        mainCREATE_SIMPLE_CBS_DEMO_ONLY=0
         mainCREATE_SIMPLE_BLINKY_DEMO_ONLY=0
         )
 
@@ -68,6 +69,7 @@ add_executable(main_blinky
 
 target_compile_definitions(main_blinky PRIVATE
         mainCREATE_SIMPLE_EDF_DEMO_ONLY=0
+        mainCREATE_SIMPLE_CBS_DEMO_ONLY=0
         mainCREATE_SIMPLE_BLINKY_DEMO_ONLY=1
         )
 
@@ -85,6 +87,7 @@ add_executable(main_EDF
 
 target_compile_definitions(main_EDF PRIVATE
         mainCREATE_SIMPLE_EDF_DEMO_ONLY=1
+        mainCREATE_SIMPLE_CBS_DEMO_ONLY=0
         mainCREATE_SIMPLE_BLINKY_DEMO_ONLY=0
         )
 
@@ -94,3 +97,21 @@ target_include_directories(main_EDF PRIVATE
 
 target_link_libraries(main_EDF pico_stdlib FreeRTOS-Kernel FreeRTOS-Kernel-Heap1)
 pico_add_extra_outputs(main_EDF)
+
+add_executable(main_CBS
+        main.c
+        main_CBS.c
+        )
+
+target_compile_definitions(main_CBS PRIVATE
+        mainCREATE_SIMPLE_CBS_DEMO_ONLY=1
+        mainCREATE_SIMPLE_EDF_DEMO_ONLY=0
+        mainCREATE_SIMPLE_BLINKY_DEMO_ONLY=0
+        )
+
+target_include_directories(main_CBS PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/../../../../Common/include)
+
+target_link_libraries(main_CBS pico_stdlib FreeRTOS-Kernel FreeRTOS-Kernel-Heap1)
+pico_add_extra_outputs(main_CBS)

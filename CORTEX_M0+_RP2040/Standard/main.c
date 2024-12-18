@@ -75,13 +75,18 @@ or 0 to run the more comprehensive test and demo application. */
 static void prvSetupHardware( void );
 
 /*
+ * main_CBS() is used when mainCREATE_SIMPLE_CBS_DEMO_ONLY is set to 1.
  * main_EDF() is used when mainCREATE_SIMPLE_EDF_DEMO_ONLY is set to 1.
  * main_blinky() is used when mainCREATE_SIMPLE_EDF_DEMO_ONLY is set to 0 AND
+ *              mainCREATE_SIMPLE_CBS_DEMO_ONLY is set to 0 AND
  *              mainCREATE_SIMPLE_BLINKY_DEMO_ONLY is set to 1.
- * main_full() is used when mainCREATE_SIMPLE_EDF_DEMO_ONLY AND
+ * main_full() is used when mainCREATE_SIMPLE_EDF_DEMO_ONLY is set to 0 AND
+ *              mainCREATE_SIMPLE_CBS_DEMO_ONLY is set to 0 AND
  *              mainCREATE_SIMPLE_BLINKY_DEMO_ONLY are set to 0.
  */
-#if mainCREATE_SIMPLE_EDF_DEMO_ONLY == 1
+#if mainCREATE_SIMPLE_CBS_DEMO_ONLY == 1
+extern void main_CBS( uint16_t led );
+#elif mainCREATE_SIMPLE_EDF_DEMO_ONLY == 1
 extern void main_EDF( uint16_t led );
 #elif mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 1
 extern void main_blinky( void );
@@ -100,7 +105,11 @@ void vApplicationTickHook( void );
 
 void vLaunch( void)
 {
-#if( mainCREATE_SIMPLE_EDF_DEMO_ONLY == 1 )
+#if( mainCREATE_SIMPLE_CBS_DEMO_ONLY == 1 )
+    {
+        main_CBS( mainEXTERNAL_LED );
+    } 
+#elif( mainCREATE_SIMPLE_EDF_DEMO_ONLY == 1 )
     {
         main_EDF( mainEXTERNAL_LED );
     }
@@ -205,7 +214,7 @@ void vApplicationIdleHook( void )
 
 void vApplicationTickHook( void )
 {
-#if ((mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 0) && (mainCREATE_SIMPLE_EDF_DEMO_ONLY == 0))
+#if ((mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 0) && (mainCREATE_SIMPLE_EDF_DEMO_ONLY == 0) && (mainCREATE_SIMPLE_CBS_DEMO_ONLY == 0))
     {
         /* The full demo includes a software timer demo/test that requires
         prodding periodically from the tick interrupt. */
