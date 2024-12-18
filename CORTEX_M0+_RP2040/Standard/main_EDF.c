@@ -37,12 +37,26 @@
 
 /* Library includes. */
 #include <stdio.h>
+#include <string.h>
 #include "hardware/gpio.h"
+#include "hardware/clocks.h"
 
 
 #define mainON_BOARD_LED					( PICO_DEFAULT_LED_PIN )
+#define TIME_SCALE                          (1000)
 
 /*-----------------------------------------------------------*/
+
+typedef enum
+{
+    LOGIC_GPIO_0 =  20,
+    LOGIC_GPIO_1 =  21,
+    LOGIC_GPIO_2 =  22,
+    LOGIC_GPIO_3 =  26,
+    LOGIC_GPIO_4 =  27,
+    LOGIC_GPIO_5 =  28,
+    LOGIC_GPIO_6 =  2,
+} LogicAnalyzerGPIOS;
 
 /*
  * Called by main when mainCREATE_SIMPLE_EDF_DEMO_ONLY is set to 1 in
@@ -53,12 +67,16 @@ void main_EDF( uint16_t led );
 /*
  * The tasks as described in the comments at the top of this file.
  */
-static void prvTask1( void *pvParameters );
-static void prvTask2( void *pvParameters );
+void prvTask( void *pvParameters );
+static __noinline void ns_delay(uint32_t ns);
+void delay_ms(uint32_t ms);
+void initLogicGPIO(void);
+void vTaskGetRunTimeStatsPrint( void );
 
 /*-----------------------------------------------------------*/
 
 static uint16_t externalLED = mainON_BOARD_LED;
+char buffer[configSTATS_BUFFER_MAX_LENGTH];
 
 /*-----------------------------------------------------------*/
 
@@ -67,15 +85,21 @@ void main_EDF( uint16_t led )
     printf(" Starting main_EDF.\n");
     externalLED = led;
 
-    uint16_t task1DeadlineMS = 100;
-    uint16_t task1PeriodMS = 1000;
-    uint16_t task2DeadlineMS = 200;
-    uint16_t task2PeriodMS = 2000;
+    initLogicGPIO();
 
+    uint32_t const task1C = 2 * TIME_SCALE;
+    uint32_t const task2C = 2 * TIME_SCALE;
+    uint32_t const task3C = 3 * TIME_SCALE;
 
-    xTaskCreateEDF( prvTask1, "Task1", configMINIMAL_STACK_SIZE, NULL, NULL, task1DeadlineMS, task1PeriodMS);
+    TaskHandle_t pxCreatedTask;
+    xTaskCreateEDF( prvTask, "Task1", configMINIMAL_STACK_SIZE, (void*)&task1C, &pxCreatedTask, 4 * TIME_SCALE, 6 * TIME_SCALE);
+    vTaskSetApplicationTaskTag(pxCreatedTask, ( void * ) (1u << LOGIC_GPIO_0));
 
-    xTaskCreateEDF( prvTask2, "Task2", configMINIMAL_STACK_SIZE, NULL, NULL, task2DeadlineMS, task2PeriodMS);
+    xTaskCreateEDF( prvTask, "Task2", configMINIMAL_STACK_SIZE, (void*)&task2C, &pxCreatedTask, 5 * TIME_SCALE, 8 * TIME_SCALE);
+    vTaskSetApplicationTaskTag(pxCreatedTask, ( void * ) (1u << LOGIC_GPIO_1));
+
+    xTaskCreateEDF( prvTask, "Task3", configMINIMAL_STACK_SIZE, (void*)&task3C, &pxCreatedTask, 7 * TIME_SCALE, 9 * TIME_SCALE);
+    vTaskSetApplicationTaskTag(pxCreatedTask, ( void * ) (1u << LOGIC_GPIO_2));
 
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
@@ -84,57 +108,133 @@ void main_EDF( uint16_t led )
 }
 /*-----------------------------------------------------------*/
 
-static void prvTask1( void *pvParameters )
+void prvTask( void *pvParameters )
 {
-	/* Remove compiler warning about unused parameter. */
-	( void ) pvParameters;
-
     TickType_t xInitialWakeTime = xTaskGetTickCount();
+    long int num = *(long int *)pvParameters;
 
 	for( ;; )
 	{
-        printf("prvTask1 Start\n");
-        gpio_xor_mask( 1u << externalLED );
-
-
-        // Task execution time
-        TickType_t currentTick = xTaskGetTickCount();
-        while(xTaskGetTickCount() - currentTick < pdMS_TO_TICKS(500))
-        {
-            // delay 0.5 second
-            //..this doesnt rellr wor ktho, i need a delay that requries the
-            // process to stay in the task
-        }
-
-        gpio_xor_mask( 1u << externalLED );
-        printf("prvTask1 DONE\n");
+        delay_ms(num);
+        //vTaskGetRunTimeStatsPrint();
         vTaskDoneEDF(&xInitialWakeTime);
 	}
 }
+
 /*-----------------------------------------------------------*/
 
-static void prvTask2( void *pvParameters )
+void delay_ms(uint32_t ms) 
 {
-	/* Remove compiler warning about unused parameter. */
-	( void ) pvParameters;
-
-    TickType_t xInitialWakeTime = xTaskGetTickCount();
-
-	for( ;; )
-	{
-        printf("prvTask2 Start\n");
-        gpio_xor_mask( 1u << mainON_BOARD_LED );
-
-        // Task execution time
-        TickType_t currentTick = xTaskGetTickCount();
-        while(xTaskGetTickCount() - currentTick < pdMS_TO_TICKS(1250))
-        {
-            // delay 1.25 second
-        }
-
-        gpio_xor_mask( 1u << mainON_BOARD_LED );
-        printf("prvTask2 DONE\n");
-        vTaskDoneEDF(&xInitialWakeTime);
-	}
+    for (int k = 0; k < ms; k++)
+    {
+        ns_delay(1000000);
+    }
 }
+
 /*-----------------------------------------------------------*/
+
+static __noinline void ns_delay(uint32_t ns) {
+    // cycles = ns * clk_sys_hz / 1,000,000,000
+    uint32_t cycles = ns * (clock_get_hz(clk_sys) >> 16u) / (1000000000u >> 16u);
+    busy_wait_at_least_cycles(cycles);
+}
+
+/*-----------------------------------------------------------*/
+
+void initLogicGPIO(void)
+{
+    gpio_init(LOGIC_GPIO_0);
+    gpio_set_dir(LOGIC_GPIO_0, 1);
+    gpio_put(LOGIC_GPIO_0, 0);
+    gpio_init(LOGIC_GPIO_1);
+    gpio_set_dir(LOGIC_GPIO_1, 1);
+    gpio_put(LOGIC_GPIO_1, 0);
+    gpio_init(LOGIC_GPIO_2);
+    gpio_set_dir(LOGIC_GPIO_2, 1);
+    gpio_put(LOGIC_GPIO_2, 0);
+    gpio_init(LOGIC_GPIO_3);
+    gpio_set_dir(LOGIC_GPIO_3, 1);
+    gpio_put(LOGIC_GPIO_3, 0);
+    gpio_init(LOGIC_GPIO_4);
+    gpio_set_dir(LOGIC_GPIO_4, 1);
+    gpio_put(LOGIC_GPIO_4, 0);
+    gpio_init(LOGIC_GPIO_5);
+    gpio_set_dir(LOGIC_GPIO_5, 1);
+    gpio_put(LOGIC_GPIO_5, 0);
+    gpio_init(LOGIC_GPIO_6);
+    gpio_set_dir(LOGIC_GPIO_6, 1);
+    gpio_put(LOGIC_GPIO_6, 0);
+}
+
+/*-----------------------------------------------------------*/
+
+/* This example demonstrates how a human readable table of run time stats
+   information is generated from raw data provided by uxTaskGetSystemState().
+   The human readable table is written to pcWriteBuffer. (see the vTaskList()
+   API function which actually does just this). */
+void vTaskGetRunTimeStatsPrint( void )
+{
+    char * pcWriteBuffer = buffer;
+    TaskStatus_t *pxTaskStatusArray;
+    volatile UBaseType_t uxArraySize, x;
+    unsigned long ulTotalRunTime, ulStatsAsPercentage;
+
+   /* Make sure the write buffer does not contain a string. */
+   *pcWriteBuffer = 0x00;
+
+   /* Take a snapshot of the number of tasks in case it changes while this
+      function is executing. */
+   uxArraySize = uxTaskGetNumberOfTasks();
+   printf("uxArraySize: %lu", uxArraySize);
+
+   /* Allocate a TaskStatus_t structure for each task. An array could be
+      allocated statically at compile time. */
+   pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
+
+   if( pxTaskStatusArray != NULL )
+   {
+      /* Generate raw status information about each task. */
+      uxArraySize = uxTaskGetSystemState( pxTaskStatusArray,
+                                 uxArraySize,
+                                 &ulTotalRunTime );
+
+      /* For percentage calculations. */
+      ulTotalRunTime /= 100UL;
+
+      /* Avoid divide by zero errors. */
+      if( ulTotalRunTime > 0 )
+      {
+         /* For each populated position in the pxTaskStatusArray array,
+            format the raw data as human readable ASCII data. */
+         for( x = 0; x < uxArraySize; x++ )
+         {
+            /* What percentage of the total run time has the task used?
+               This will always be rounded down to the nearest integer.
+               ulTotalRunTimeDiv100 has already been divided by 100. */
+            ulStatsAsPercentage =
+                  pxTaskStatusArray[ x ].ulRunTimeCounter / ulTotalRunTime;
+
+            if( ulStatsAsPercentage > 0UL )
+            {
+                printf("%stt%lutt%lu%%rn \n",
+                                 pxTaskStatusArray[ x ].pcTaskName,
+                                 pxTaskStatusArray[ x ].ulRunTimeCounter,
+                                 ulStatsAsPercentage );
+            }
+            else
+            {
+               /* If the percentage is zero here then the task has
+                  consumed less than 1% of the total run time. */
+               printf("%stt%lutt<1%%rn \n",
+                                 pxTaskStatusArray[ x ].pcTaskName,
+                                 pxTaskStatusArray[ x ].ulRunTimeCounter );
+            }
+         }
+      }
+
+      /* The array is no longer needed, free the memory it consumes. */
+      //vPortFree( pxTaskStatusArray );
+   }
+}
+
+
